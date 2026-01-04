@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.agimoveis.api.dto.EnderecoDTO;
 import com.agimoveis.api.model.Imovel;
 import com.agimoveis.api.service.ImovelService;
 
@@ -91,5 +92,12 @@ public class ImovelController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // Endpoint: GET http://localhost:8080/api/imoveis/cep/01001000
+    @GetMapping("/cep/{cep}")
+    public ResponseEntity<EnderecoDTO> consultarCep(@PathVariable String cep) {
+        EnderecoDTO endereco = service.buscarCep(cep);
+        return endereco != null ? ResponseEntity.ok(endereco) : ResponseEntity.notFound().build();
     }
 }

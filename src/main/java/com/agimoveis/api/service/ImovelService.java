@@ -64,11 +64,16 @@ public class ImovelService {
         return repository.findByAtivoTrue();
     }
 
+    public List<Imovel> pesquisarPorLocalidade(String termo) {
+        return repository.findByAtivoTrueAndCidadeContainingIgnoreCaseOrAtivoTrueAndBairroContainingIgnoreCase(termo,
+                termo);
+    }
+
     // DELETE (Soft Delete / Exclusão Lógica)
     public void excluirLogico(Long id) {
         Imovel imovel = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Imóvel não encontrado!"));
-        
+
         imovel.setAtivo(false); // Apenas desativa, não remove do banco
         repository.save(imovel);
     }

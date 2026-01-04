@@ -46,7 +46,8 @@ public class ImovelController {
     }
 
     // 3. BUSCA COM FILTROS (Cidade e Preço)
-    // Endpoint: GET http://localhost:8080/api/imoveis/busca?cidade=Santos&precoMax=500000
+    // Endpoint: GET
+    // http://localhost:8080/api/imoveis/busca?cidade=Santos&precoMax=500000
     @GetMapping("/busca")
     public List<Imovel> buscarComFiltros(
             @RequestParam(required = false) String cidade,
@@ -72,6 +73,12 @@ public class ImovelController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // Endpoint: GET http://localhost:8080/api/imoveis/pesquisa?termo=Centro
+    @GetMapping("/pesquisa")
+    public List<Imovel> pesquisar(@RequestParam String termo) {
+        return service.pesquisarPorLocalidade(termo);
     }
 
     // 6. EXCLUSÃO LÓGICA (SOFT DELETE)

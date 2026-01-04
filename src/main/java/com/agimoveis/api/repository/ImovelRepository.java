@@ -20,6 +20,8 @@ public interface ImovelRepository extends JpaRepository<Imovel, Long> {
     List<Imovel> findByCidadeContainingIgnoreCaseAndAtivoTrue(String cidade);
 
 	List<Imovel> findByCidadeContainingIgnoreCaseAndPrecoLessThanEqualAndAtivoTrue(String cidade, Double preco);
+
+    List<Imovel> findByAtivoTrueAndCidadeContainingIgnoreCaseOrAtivoTrueAndBairroContainingIgnoreCase(String cidade, String bairro);
     
 }
     

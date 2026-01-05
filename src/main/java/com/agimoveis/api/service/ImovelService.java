@@ -6,9 +6,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import java.nio.file.*; // Certifique-se de ter estes imports
+import org.springframework.web.multipart.MultipartFile;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.agimoveis.api.dto.DashboardDTO;
 import com.agimoveis.api.dto.EnderecoDTO;
@@ -16,7 +20,6 @@ import com.agimoveis.api.model.Imovel;
 import com.agimoveis.api.model.enums.Finalidade;
 import com.agimoveis.api.model.enums.TipoImovel;
 import com.agimoveis.api.repository.ImovelRepository;
-
 
 @Service
 public class ImovelService {
@@ -26,81 +29,83 @@ public class ImovelService {
 
     /**
      * Método salvar um novo imóvel.
+     * 
      * @param imovel
      * @return Imovel salvo
      */
     public Imovel salvar(Imovel imovel) {
-    if (imovel.getCep() != null && !imovel.getCep().isEmpty()) {
-        EnderecoDTO dadosEndereco = buscarCep(imovel.getCep());
+        if (imovel.getCep() != null && !imovel.getCep().isEmpty()) {
+            EnderecoDTO dadosEndereco = buscarCep(imovel.getCep());
 
-        // LINHA DE TESTE:
-        System.out.println("CEP pesquisado: " + imovel.getCep());
-        System.out.println("Retorno da API: " + dadosEndereco);
+            // LINHA DE TESTE:
+            System.out.println("CEP pesquisado: " + imovel.getCep());
+            System.out.println("Retorno da API: " + dadosEndereco);
 
-        
-        if (dadosEndereco != null && dadosEndereco.getLogradouro() != null) {
-            // Preenche apenas o que vem da API
-            imovel.setLogradouro(dadosEndereco.getLogradouro());
-            imovel.setBairro(dadosEndereco.getBairro());
-            imovel.setCidade(dadosEndereco.getLocalidade()); // Mapeia localidade para cidade
-            imovel.setUf(dadosEndereco.getUf());
-            
-            
+            if (dadosEndereco != null && dadosEndereco.getLogradouro() != null) {
+                // Preenche apenas o que vem da API
+                imovel.setLogradouro(dadosEndereco.getLogradouro());
+                imovel.setBairro(dadosEndereco.getBairro());
+                imovel.setCidade(dadosEndereco.getLocalidade()); // Mapeia localidade para cidade
+                imovel.setUf(dadosEndereco.getUf());
+
+            }
         }
-    }
 
-    imovel.setAtivo(true);
-    return repository.save(imovel);
-}
+        imovel.setAtivo(true);
+        return repository.save(imovel);
+    }
 
     /**
      * Método atualizar um imóvel existente.
+     * 
      * @param id
      * @param imovelAtualizado
      * @return Imovel atualizado
      */
     public Imovel atualizar(Long id, Imovel imovelAtualizado) {
-    return repository.findById(id).map(imovel -> {
-        // Lógica de CEP: Se o CEP mudou, busca na ViaCEP
-        if (imovelAtualizado.getCep() != null && !imovelAtualizado.getCep().equals(imovel.getCep())) {
-            EnderecoDTO dadosEndereco = buscarCep(imovelAtualizado.getCep());
-            if (dadosEndereco != null && dadosEndereco.getLogradouro() != null) {
-                imovel.setCep(imovelAtualizado.getCep());
-                imovel.setLogradouro(dadosEndereco.getLogradouro());
-                imovel.setBairro(dadosEndereco.getBairro());
-                imovel.setCidade(dadosEndereco.getLocalidade());
-                imovel.setUf(dadosEndereco.getUf());
-                // Nota: Número e Complemento geralmente o usuário digita manualmente
+        return repository.findById(id).map(imovel -> {
+            // Lógica de CEP: Se o CEP mudou, busca na ViaCEP
+            if (imovelAtualizado.getCep() != null && !imovelAtualizado.getCep().equals(imovel.getCep())) {
+                EnderecoDTO dadosEndereco = buscarCep(imovelAtualizado.getCep());
+                if (dadosEndereco != null && dadosEndereco.getLogradouro() != null) {
+                    imovel.setCep(imovelAtualizado.getCep());
+                    imovel.setLogradouro(dadosEndereco.getLogradouro());
+                    imovel.setBairro(dadosEndereco.getBairro());
+                    imovel.setCidade(dadosEndereco.getLocalidade());
+                    imovel.setUf(dadosEndereco.getUf());
+                    // Nota: Número e Complemento geralmente o usuário digita manualmente
+                    imovel.setNumero(imovelAtualizado.getNumero());
+                    imovel.setComplemento(imovelAtualizado.getComplemento());
+                }
+            } else {
+                // Se o CEP é o mesmo, apenas atualiza os dados de endereço que podem ter mudado
+                // manualmente
+                imovel.setLogradouro(imovelAtualizado.getLogradouro());
+                imovel.setBairro(imovelAtualizado.getBairro());
+                imovel.setCidade(imovelAtualizado.getCidade());
+                imovel.setUf(imovelAtualizado.getUf());
                 imovel.setNumero(imovelAtualizado.getNumero());
                 imovel.setComplemento(imovelAtualizado.getComplemento());
             }
-        } else {
-            // Se o CEP é o mesmo, apenas atualiza os dados de endereço que podem ter mudado manualmente
-            imovel.setLogradouro(imovelAtualizado.getLogradouro());
-            imovel.setBairro(imovelAtualizado.getBairro());
-            imovel.setCidade(imovelAtualizado.getCidade());
-            imovel.setUf(imovelAtualizado.getUf());
-            imovel.setNumero(imovelAtualizado.getNumero());
-            imovel.setComplemento(imovelAtualizado.getComplemento());
-        }
 
-        // Atualiza os campos de negócio do imóvel
-        imovel.setTitulo(imovelAtualizado.getTitulo());
-        imovel.setDescricao(imovelAtualizado.getDescricao());
-        imovel.setPreco(imovelAtualizado.getPreco());
-        imovel.setQuartos(imovelAtualizado.getQuartos());
-        imovel.setBanheiros(imovelAtualizado.getBanheiros());
-        imovel.setArea(imovelAtualizado.getArea());
-        imovel.setTipo(imovelAtualizado.getTipo());
-        imovel.setFinalidade(imovelAtualizado.getFinalidade());
-        imovel.setUrlImagemPrincipal(imovelAtualizado.getUrlImagemPrincipal());
+            // Atualiza os campos de negócio do imóvel
+            imovel.setTitulo(imovelAtualizado.getTitulo());
+            imovel.setDescricao(imovelAtualizado.getDescricao());
+            imovel.setPreco(imovelAtualizado.getPreco());
+            imovel.setQuartos(imovelAtualizado.getQuartos());
+            imovel.setBanheiros(imovelAtualizado.getBanheiros());
+            imovel.setArea(imovelAtualizado.getArea());
+            imovel.setTipo(imovelAtualizado.getTipo());
+            imovel.setFinalidade(imovelAtualizado.getFinalidade());
+            imovel.setUrlImagemPrincipal(imovelAtualizado.getUrlImagemPrincipal());
 
-        return repository.save(imovel);
-    }).orElseThrow(() -> new RuntimeException("Imóvel não encontrado com o ID: " + id));
-}
+            return repository.save(imovel);
+        }).orElseThrow(() -> new RuntimeException("Imóvel não encontrado com o ID: " + id));
+    }
 
     /**
      * Método listar todos os imóveis ativos.
+     * 
      * @return Lista de imóveis ativos
      */
     public List<Imovel> listarAtivos() {
@@ -109,6 +114,7 @@ public class ImovelService {
 
     /**
      * Método buscar imóvel por ID.
+     * 
      * @param id
      * @return Retorna um imóvel pelo seu ID.
      */
@@ -118,6 +124,7 @@ public class ImovelService {
 
     /**
      * Método buscar imóveis com filtros de cidade e preço máximo.
+     * 
      * @param cidade
      * @param precoMax
      * @return Lista de imóveis que atendem aos filtros.
@@ -132,8 +139,10 @@ public class ImovelService {
         }
         return repository.findByAtivoTrue();
     }
+
     /**
      * Método pesquisar imóveis por localidade (cidade ou bairro).
+     * 
      * @param termo
      * @return Lista de imóveis que correspondem ao termo de pesquisa.
      */
@@ -144,6 +153,7 @@ public class ImovelService {
 
     /**
      * Método excluir logicamente um imóvel (desativar).
+     * 
      * @param id
      */
     public void excluirLogico(Long id) {
@@ -164,25 +174,58 @@ public class ImovelService {
     }
 
     public DashboardDTO obterEstatisticas() {
-    long total = repository.count();
-    long ativos = repository.countByAtivoTrue();
-    long inativos = repository.countByAtivoFalse();
+        long total = repository.count();
+        long ativos = repository.countByAtivoTrue();
+        long inativos = repository.countByAtivoFalse();
 
-    // Contagem por Tipo (CASA, APARTAMENTO, etc)
-    Map<String, Long> porTipo = Arrays.stream(TipoImovel.values())
-        .collect(Collectors.toMap(
-            tipo -> tipo.name(),
-            tipo -> repository.countByTipoAndAtivoTrue(tipo)
-        ));
+        // Contagem por Tipo (CASA, APARTAMENTO, etc)
+        Map<String, Long> porTipo = Arrays.stream(TipoImovel.values())
+                .collect(Collectors.toMap(
+                        tipo -> tipo.name(),
+                        tipo -> repository.countByTipoAndAtivoTrue(tipo)));
 
-    // Contagem por Finalidade (VENDA, LOCACAO)
-    Map<String, Long> porFinalidade = Arrays.stream(Finalidade.values())
-        .collect(Collectors.toMap(
-            f -> f.name(),
-            f -> repository.countByFinalidadeAndAtivoTrue(f)
-        ));
+        // Contagem por Finalidade (VENDA, LOCACAO)
+        Map<String, Long> porFinalidade = Arrays.stream(Finalidade.values())
+                .collect(Collectors.toMap(
+                        f -> f.name(),
+                        f -> repository.countByFinalidadeAndAtivoTrue(f)));
 
-    return new DashboardDTO(total, ativos, inativos, porTipo, porFinalidade);
+        return new DashboardDTO(total, ativos, inativos, porTipo, porFinalidade);
+    }
+
+    public String salvarFoto(Long id, MultipartFile file) {
+    try {
+        // 1. Criar a pasta se não existir
+        Path diretorio = Paths.get("uploads");
+        if (!Files.exists(diretorio)) {
+            Files.createDirectories(diretorio);
+        }
+
+        // 2. Definir o nome e salvar o arquivo físico
+        String originalNome = file.getOriginalFilename();
+        String extensao = (originalNome != null && originalNome.contains(".")) 
+                ? originalNome.substring(originalNome.lastIndexOf(".")) : ".jpg";
+        
+        String nomeArquivo = "imovel_" + id + extensao;
+        Path caminhoCompleto = diretorio.resolve(nomeArquivo);
+        Files.copy(file.getInputStream(), caminhoCompleto, StandardCopyOption.REPLACE_EXISTING);
+
+        // 3. ATUALIZAÇÃO NO BANCO (Onde ocorre o erro de transação)
+        // Buscamos o imóvel existente para garantir que não estamos criando um novo ou perdendo dados
+        Imovel imovel = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Imóvel não encontrado com ID: " + id));
+        
+        imovel.setUrlImagemPrincipal("/imagens/" + nomeArquivo);
+        
+        // Salva apenas a alteração da URL
+        repository.save(imovel);
+
+        return nomeArquivo;
+    } catch (Exception e) {
+        // Log para você ver o erro real no console do VS Code
+        e.printStackTrace(); 
+        throw new RuntimeException("Erro ao processar upload: " + e.getMessage());
+    }
 }
 
 }

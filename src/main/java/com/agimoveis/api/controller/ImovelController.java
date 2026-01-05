@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.agimoveis.api.dto.DashboardDTO;
 import com.agimoveis.api.dto.EnderecoDTO;
 import com.agimoveis.api.model.Imovel;
 import com.agimoveis.api.service.ImovelService;
@@ -99,5 +100,11 @@ public class ImovelController {
     public ResponseEntity<EnderecoDTO> consultarCep(@PathVariable String cep) {
         EnderecoDTO endereco = service.buscarCep(cep);
         return endereco != null ? ResponseEntity.ok(endereco) : ResponseEntity.notFound().build();
+    }
+
+    // Endpoint: GET http://localhost:8080/api/imoveis/dashboard
+    @GetMapping("/dashboard")
+    public ResponseEntity<DashboardDTO> getDashboard() {
+        return ResponseEntity.ok(service.obterEstatisticas());
     }
 }

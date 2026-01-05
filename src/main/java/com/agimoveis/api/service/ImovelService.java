@@ -1,15 +1,22 @@
 package com.agimoveis.api.service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.agimoveis.api.dto.DashboardDTO;
 import com.agimoveis.api.dto.EnderecoDTO;
 import com.agimoveis.api.model.Imovel;
+import com.agimoveis.api.model.enums.Finalidade;
+import com.agimoveis.api.model.enums.TipoImovel;
 import com.agimoveis.api.repository.ImovelRepository;
+
 
 @Service
 public class ImovelService {
@@ -155,4 +162,27 @@ public class ImovelService {
         RestTemplate restTemplate = new RestTemplate();
         return restTemplate.getForObject(url, EnderecoDTO.class);
     }
+
+    public DashboardDTO obterEstatisticas() {
+    long total = repository.count();
+    long ativos = repository.countByAtivoTrue();
+    long inativos = repository.countByAtivoFalse();
+
+    // Contagem por Tipo (CASA, APARTAMENTO, etc)
+    Map<String, Long> porTipo = Arrays.stream(TipoImovel.values())
+        .collect(Collectors.toMap(
+            tipo -> tipo.name(),
+            tipo -> repository.countByTipoAndAtivoTrue(tipo)
+        ));
+
+    // Contagem por Finalidade (VENDA, LOCACAO)
+    Map<String, Long> porFinalidade = Arrays.stream(Finalidade.values())
+        .collect(Collectors.toMap(
+            f -> f.name(),
+            f -> repository.countByFinalidadeAndAtivoTrue(f)
+        ));
+
+    return new DashboardDTO(total, ativos, inativos, porTipo, porFinalidade);
+}
+
 }

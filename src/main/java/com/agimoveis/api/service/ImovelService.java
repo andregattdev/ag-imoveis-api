@@ -37,21 +37,22 @@ public class ImovelService {
         if (imovel.getCep() != null && !imovel.getCep().isEmpty()) {
             EnderecoDTO dadosEndereco = buscarCep(imovel.getCep());
 
-            // LINHA DE TESTE:
-            System.out.println("CEP pesquisado: " + imovel.getCep());
-            System.out.println("Retorno da API: " + dadosEndereco);
-
             if (dadosEndereco != null && dadosEndereco.getLogradouro() != null) {
-                // Preenche apenas o que vem da API
                 imovel.setLogradouro(dadosEndereco.getLogradouro());
                 imovel.setBairro(dadosEndereco.getBairro());
-                imovel.setCidade(dadosEndereco.getLocalidade()); // Mapeia localidade para cidade
-                imovel.setUf(dadosEndereco.getUf());
 
+                // ESTA LINHA É A CHAVE:
+                // Pega 'localidade' do DTO e salva em 'cidade' do Imovel
+                imovel.setCidade(dadosEndereco.getLocalidade());
+
+                imovel.setUf(dadosEndereco.getUf());
             }
         }
 
+        // Força o imóvel a começar como ativo
         imovel.setAtivo(true);
+
+        // O repository.save precisa receber o objeto 'imovel' JÁ PREENCHIDO acima
         return repository.save(imovel);
     }
 
@@ -194,38 +195,40 @@ public class ImovelService {
     }
 
     public String salvarFoto(Long id, MultipartFile file) {
-    try {
-        // 1. Criar a pasta se não existir
-        Path diretorio = Paths.get("uploads");
-        if (!Files.exists(diretorio)) {
-            Files.createDirectories(diretorio);
+        try {
+            // 1. Criar a pasta se não existir
+            Path diretorio = Paths.get("uploads");
+            if (!Files.exists(diretorio)) {
+                Files.createDirectories(diretorio);
+            }
+
+            // 2. Definir o nome e salvar o arquivo físico
+            String originalNome = file.getOriginalFilename();
+            String extensao = (originalNome != null && originalNome.contains("."))
+                    ? originalNome.substring(originalNome.lastIndexOf("."))
+                    : ".jpg";
+
+            String nomeArquivo = "imovel_" + id + extensao;
+            Path caminhoCompleto = diretorio.resolve(nomeArquivo);
+            Files.copy(file.getInputStream(), caminhoCompleto, StandardCopyOption.REPLACE_EXISTING);
+
+            // 3. ATUALIZAÇÃO NO BANCO (Onde ocorre o erro de transação)
+            // Buscamos o imóvel existente para garantir que não estamos criando um novo ou
+            // perdendo dados
+            Imovel imovel = repository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Imóvel não encontrado com ID: " + id));
+
+            imovel.setUrlImagemPrincipal("/imagens/" + nomeArquivo);
+
+            // Salva apenas a alteração da URL
+            repository.save(imovel);
+
+            return nomeArquivo;
+        } catch (Exception e) {
+            // Log para você ver o erro real no console do VS Code
+            e.printStackTrace();
+            throw new RuntimeException("Erro ao processar upload: " + e.getMessage());
         }
-
-        // 2. Definir o nome e salvar o arquivo físico
-        String originalNome = file.getOriginalFilename();
-        String extensao = (originalNome != null && originalNome.contains(".")) 
-                ? originalNome.substring(originalNome.lastIndexOf(".")) : ".jpg";
-        
-        String nomeArquivo = "imovel_" + id + extensao;
-        Path caminhoCompleto = diretorio.resolve(nomeArquivo);
-        Files.copy(file.getInputStream(), caminhoCompleto, StandardCopyOption.REPLACE_EXISTING);
-
-        // 3. ATUALIZAÇÃO NO BANCO (Onde ocorre o erro de transação)
-        // Buscamos o imóvel existente para garantir que não estamos criando um novo ou perdendo dados
-        Imovel imovel = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imóvel não encontrado com ID: " + id));
-        
-        imovel.setUrlImagemPrincipal("/imagens/" + nomeArquivo);
-        
-        // Salva apenas a alteração da URL
-        repository.save(imovel);
-
-        return nomeArquivo;
-    } catch (Exception e) {
-        // Log para você ver o erro real no console do VS Code
-        e.printStackTrace(); 
-        throw new RuntimeException("Erro ao processar upload: " + e.getMessage());
     }
-}
 
 }

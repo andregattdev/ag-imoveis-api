@@ -1,9 +1,14 @@
 package com.agimoveis.api.controller;
 
+import com.agimoveis.api.dto.LoginDTO;
 import com.agimoveis.api.model.Usuario;
+import com.agimoveis.api.repository.UsuarioRepository;
+import com.agimoveis.api.service.TokenService;
 import com.agimoveis.api.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,9 +20,26 @@ public class UsuarioController {
     @Autowired
     private UsuarioService service;
 
-    @PostMapping
-    public ResponseEntity<Usuario> cadastrar(@RequestBody Usuario usuario) {
-        return ResponseEntity.ok(service.criar(usuario));
+    @Autowired
+    private UsuarioRepository repository;
+
+    @Autowired
+    private TokenService tokenService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginDTO data) {
+        Usuario usuario = this.service.buscarPorEmail(data.getEmail());
+
+        // Compara a senha digitada com a senha criptografada do banco
+        if (passwordEncoder.matches(data.getSenha(), usuario.getSenha())) {
+            String token = tokenService.gerarToken(usuario);
+            return ResponseEntity.ok(token);
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-mail ou senha inválidos");
     }
 
     @GetMapping

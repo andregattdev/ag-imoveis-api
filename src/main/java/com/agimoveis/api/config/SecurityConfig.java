@@ -27,13 +27,19 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // Portas abertas para cadastro e login
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+                        // Públicos
                         .requestMatchers(HttpMethod.POST, "/api/usuarios/login").permitAll()
-                        // Qualquer outra requisição exige o token
-                        .anyRequest().authenticated()
-                )
-                // Colocamos o nosso filtro de token ANTES do filtro padrão de usuário/senha do Spring
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/imoveis").permitAll() // Qualquer um vê os imóveis
+
+                        // Restritos por Cargo
+                        .requestMatchers(HttpMethod.POST, "/api/imoveis").hasAnyRole("ADMIN", "CORRETOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/imoveis/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/usuarios/**").hasRole("ADMIN")
+
+                        // O resto precisa estar logado
+                        .anyRequest().authenticated())
+                
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors.configure(http))
                 .build();

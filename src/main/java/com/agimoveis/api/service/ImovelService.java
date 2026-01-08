@@ -21,6 +21,8 @@ import com.agimoveis.api.model.enums.Finalidade;
 import com.agimoveis.api.model.enums.TipoImovel;
 import com.agimoveis.api.repository.ImovelRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class ImovelService {
 
@@ -101,7 +103,7 @@ public class ImovelService {
             imovel.setUrlImagemPrincipal(imovelAtualizado.getUrlImagemPrincipal());
 
             return repository.save(imovel);
-        }).orElseThrow(() -> new RuntimeException("Imóvel não encontrado com o ID: " + id));
+        }).orElseThrow(() -> new EntityNotFoundException("Imóvel não encontrado com o ID: " + id));
     }
 
     /**
@@ -159,7 +161,7 @@ public class ImovelService {
      */
     public void excluirLogico(Long id) {
         Imovel imovel = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imóvel não encontrado!"));
+                .orElseThrow(() -> new EntityNotFoundException("Imóvel não encontrado!"));
 
         imovel.setAtivo(false); // Apenas desativa, não remove do banco
         repository.save(imovel);
@@ -216,7 +218,7 @@ public class ImovelService {
             // Buscamos o imóvel existente para garantir que não estamos criando um novo ou
             // perdendo dados
             Imovel imovel = repository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Imóvel não encontrado com ID: " + id));
+                    .orElseThrow(() -> new EntityNotFoundException("Imóvel não encontrado com ID: " + id));
 
             imovel.setUrlImagemPrincipal("/imagens/" + nomeArquivo);
 
@@ -227,7 +229,7 @@ public class ImovelService {
         } catch (Exception e) {
             // Log para você ver o erro real no console do VS Code
             e.printStackTrace();
-            throw new RuntimeException("Erro ao processar upload: " + e.getMessage());
+            throw new EntityNotFoundException("Erro ao processar upload: " + e.getMessage());
         }
     }
 

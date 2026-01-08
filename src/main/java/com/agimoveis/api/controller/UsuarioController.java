@@ -5,6 +5,7 @@ import com.agimoveis.api.model.Usuario;
 import com.agimoveis.api.repository.UsuarioRepository;
 import com.agimoveis.api.service.TokenService;
 import com.agimoveis.api.service.UsuarioService;
+import jakarta.validation.Valid; // IMPORTANTE
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,10 +31,9 @@ public class UsuarioController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginDTO data) {
+    public ResponseEntity<String> login(@RequestBody @Valid LoginDTO data) {
         Usuario usuario = this.service.buscarPorEmail(data.getEmail());
 
-        // Compara a senha digitada com a senha criptografada do banco
         if (passwordEncoder.matches(data.getSenha(), usuario.getSenha())) {
             String token = tokenService.gerarToken(usuario);
             return ResponseEntity.ok(token);
@@ -53,7 +53,8 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> atualizar(@PathVariable Long id, @RequestBody Usuario usuario) {
+    public ResponseEntity<Usuario> atualizar(@PathVariable Long id, @RequestBody @Valid Usuario usuario) { 
+                                                                                                           
         return ResponseEntity.ok(service.atualizar(id, usuario));
     }
 

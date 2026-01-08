@@ -2,6 +2,7 @@ package com.agimoveis.api.service;
 
 import com.agimoveis.api.model.Usuario;
 import com.agimoveis.api.repository.UsuarioRepository;
+import jakarta.persistence.EntityNotFoundException; // Importante
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,45 +18,28 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    /**
-     * Método para criar um novo usuário
-     * 
-     * @param usuario
-     * @return Retorna um usuario criado no banco de dados
-     */
     public Usuario criar(Usuario usuario) {
         if (repository.findByEmail(usuario.getEmail()).isPresent()) {
-            throw new RuntimeException("E-mail já cadastrado!");
+            
+            throw new RuntimeException("E-mail já cadastrado!"); 
         }
 
-        // CRIPTOGRAFIA AQUI:
         String senhaCriptografada = passwordEncoder.encode(usuario.getSenha());
         usuario.setSenha(senhaCriptografada);
 
         return repository.save(usuario);
     }
 
-    /**
-     * Método para listar todos os usuários
-     * 
-     * @return Retorna uma lista com todos os usuários
-     */
     public List<Usuario> listarTodos() {
         return repository.findAll();
     }
 
-    /**
-     * Método para buscar um usuário pelo ID
-     * 
-     * @param id
-     * @return Retorna o usuário encontrado ou lança uma exceção se não encontrado
-     */
     public Usuario buscarPorId(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+                // Mudamos para EntityNotFoundException para o Tratador capturar 404
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado!"));
     }
 
-    // Atualizar
     public Usuario atualizar(Long id, Usuario dadosNovos) {
         Usuario usuarioExistente = buscarPorId(id);
 
@@ -64,7 +48,8 @@ public class UsuarioService {
         usuarioExistente.setRole(dadosNovos.getRole());
 
         if (dadosNovos.getSenha() != null && !dadosNovos.getSenha().isEmpty()) {
-            usuarioExistente.setSenha(dadosNovos.getSenha());
+           
+            usuarioExistente.setSenha(passwordEncoder.encode(dadosNovos.getSenha()));
         }
 
         return repository.save(usuarioExistente);
@@ -72,15 +57,9 @@ public class UsuarioService {
 
     public Usuario buscarPorEmail(String email) {
         return repository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado com este e-mail."));
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com este e-mail."));
     }
 
-    /**
-     * Método para deletar um usuário pelo ID
-     * 
-     * @param id
-     * @return Retorna usuario deletado
-     */
     public void deletar(Long id) {
         Usuario usuario = buscarPorId(id);
         repository.delete(usuario);
